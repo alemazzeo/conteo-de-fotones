@@ -3,9 +3,9 @@
 import numpy as np
 import visa
 import time
-from tools import FileTools as FT
-from tools import PromptTools as PT
-from tools import LogTools as LT
+from .tools import FileTools as FT
+from .tools import PromptTools as PT
+from .tools import LogTools as LT
 
 MAX_LOG_ANSWERS = 10
 
