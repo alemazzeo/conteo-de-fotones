@@ -128,15 +128,17 @@ class LogTools():
 
     def time_stamp(self, message=None, answer=None, style='%X'):
         with open(self._file, 'a') as f:
+            str_time = time.strftime(style)
             if message is not None:
-                f.write(time.strftime(style) + " >> " + message + '\n')
+                f.write('{} >> {}\n'.format(str_time, message))
             if answer is not None:
-                f.write(' ' * 8 + ' << ' + answer + '\n')
+                f.write(' ' * len(str_time) + ' << {}\n'.format(answer))
             f.write('\n')
 
     def annontate(self, comment, style='%X'):
         with open(self._file, 'a') as f:
-            f.write(time.strftime(style) + " ## " + comment + '\n')
+            str_time = time.strftime(style)
+            f.write('{} ## {}\n'.format(str_time, comment))
             f.write('\n')
 
     def block(self, *args, border='#', inside=' ', align='<', width=70):

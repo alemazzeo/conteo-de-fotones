@@ -67,3 +67,8 @@ class Oscilloscope(Instrument):
     def get_x(self):
         n = self._stop - self._start - 1
         return self._xze + np.arange(n) * self._xin
+
+    def get_y_range(self):
+        y_min = self._yze + self._ymu * (self._start - 1 - self._yoff)
+        y_max = self._yze + self._ymu * (self._stop - 1 - self._yoff)
+        return y_min, y_max
