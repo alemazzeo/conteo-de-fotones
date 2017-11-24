@@ -29,7 +29,7 @@ def argumentos():
     parser.add_argument('-rsc', type=str,
                         default='USB0::1689::867::C102223::0::INSTR',
                         help='resource')
-    parser.add_argument('-canal', type=str, default='CH2',
+    parser.add_argument('-canal', type=str, default='CH1',
                         help='canal: "CH1" o "CH2"')
     parser.add_argument('-backend', type=str, default='@py',
                         help='"" para NI, "@py" para pyvisa-py')
@@ -51,7 +51,7 @@ def argumentos():
 
     parser.add_argument('-i', '--interactivo', action='store_true',
                         help='activa el modo interactivo')
-    parser.add_argument('-n_parcial', type=int, default=10,
+    parser.add_argument('-n_parcial', type=int, default=1,
                         help='intervalo entre gráficos')
 
     parser.add_argument('-sim', action='store_true',
@@ -81,7 +81,7 @@ def crea_archivo(ruta_completa, params):
         hdf5.create_group('alturas')
         hdf5.create_group('histogramas')
     if params.guardar_ejes:
-        hdf5.create_group('ventanas')
+        hdf5.create_group('pantallas')
     if params.guardar_autocorr:
         hdf5.create_group('autocorr')
 
@@ -180,18 +180,19 @@ def main(params):
     if params.sim:
         eje_x = np.arange(2500)
         eje_y = simula_datos()
-        rango = (-1, 0)
+        rango = (-1.0, 0)
 
     else:
         osc = Oscilloscope(resource=params.rsc, backend=params.backend)
         osc.setup_curve(params.canal, start=1, stop=2500)
         osc.get_waveform_preamble()
-        rango = (osc.get_y_range()[0], 0.0)
+        escala = float(osc._inst.query('{}:SCA?'.format(params.canal)))
+        rango = (-escala * 6, 0.0)
         eje_x = osc.get_x()
         eje_y = osc.get_y()
 
     if params.umbral is None:
-        umbral = -np.std(eje_y) / 2
+        umbral = -np.std(eje_y) * 1.5
     else:
         umbral = params.umbral
 
@@ -258,7 +259,7 @@ def main(params):
                     plot_curva.set_data(eje_y, eje_x)
                     plot_puntas.set_data(eje_y[puntas], eje_x[puntas])
                     if i % params.n_parcial == 0:
-                        yp, xp = np.histogram(cantidad)
+                        yp, xp = np.histogram(cantidad[0:i])
                         plot_cantidad.set_data(xp[0:-1], yp)
                         plot_hist.set_data(bin_edges[0:-1], hist_voltajes)
                         ax_principal.relim()
@@ -274,7 +275,7 @@ def main(params):
 
         print('\rAdquisición finalizada {}'.format(time.strftime('%x - %X')))
     except (KeyboardInterrupt, NameError) as error:
-        print(error)
+        # print(error)
         print('\nAdquisición interrumpida {}'.format(time.strftime('%x - %X')))
         if params.guardar_analisis:
             print('Mediciones recortadas en la posición {}.'.format(i - 1))
@@ -284,7 +285,7 @@ def main(params):
         hdf5['/cantidad'] = cantidad
         if not params.sim:
             guardar_osciloscopio(osc, hdf5['/cantidad'])
-        hdf5['/hist_general'] = hist_voltajes
+        hdf5['/hist_voltajes'] = hist_voltajes
         hdf5['/bin_edges'] = bin_edges
 
     if params.guardar_ejes:
