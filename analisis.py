@@ -40,8 +40,9 @@ def ajustar_bose(hist_x, hist_y):
 
 
 def histograma(medicion, tamaño_ventana=2500,
-               umbral=0.0, bins=25, ax=None,
-               ajusta_poisson=False, ajusta_bose=False):
+               umbral=0.0, bins=25, ax=None, color='blue',
+               ajusta_poisson=False, ajusta_bose=False,
+               plot_histograma=True):
     """ Devuelve el histograma """
 
     x, y = ejes_largos(medicion)
@@ -65,36 +66,43 @@ def histograma(medicion, tamaño_ventana=2500,
     #hist_x += ((hist_x[1] - hist_x[0]) / 2)
     hist_x = hist_x[0:-1]
 
-    # ax.hist(cantidad, bins=bins, density=True,
-    ax.plot(hist_x, hist_y, 'go',
-            label=r'$tc={:.2f}\;\mu s$'.format(duracion))
+    if plot_histograma:
+        ax.bar(hist_x, hist_y, alpha=0.7, color=color,
+               label=r'$t_c={:.2f}\;\mu s$'.format(abs(duracion)))
 
     if ajusta_poisson:
         lambda_poisson, A = ajustar_poisson(hist_x, hist_y)
         x_continuo = np.arange(bins)
-        ax.plot(x_continuo, poisson(x_continuo, lambda_poisson, A))
+        ax.plot(x_continuo, poisson(x_continuo, lambda_poisson, A),
+                color='k', marker='o', markersize=10, mfc='white', ls='--')
 
     if ajusta_bose:
         maximo = np.argmax(hist_y)
         lambda_bose, A = ajustar_bose(hist_x[maximo:], hist_y[maximo:])
         x_continuo = np.arange(bins)
-        ax.plot(x_continuo, bose(x_continuo, lambda_bose, A))
+        ax.plot(x_continuo, bose(x_continuo, lambda_bose, A),
+                color='k', marker='o', markersize=10, mfc='white', ls='--')
+
+    ax.set_xticks(np.arange(bins)[:-1])
+    ax.set_yticks([])
 
     return hist_x, hist_y
 
 
-def graficar_ventanas(medicion, ventanas, umbral=-0.001,
+def graficar_ventanas(medicion, ventanas, umbral=-0.001, bins=15, color='blue',
                       ajusta_bose=False, ajusta_poisson=False):
     """ Grafica los histogramas para una lista de ventanas """
-    fig, ax = plt.subplots(len(ventanas))
-    ax[0].set_title(medicion.upper())
+    fig, ax = plt.subplots(len(ventanas), sharex=True)
+
+    fig.canvas.set_window_title(medicion.title())
 
     for i, tamaño in enumerate(ventanas):
-        histograma(medicion, tamaño_ventana=tamaño,
-                   umbral=umbral, ax=ax[i],
+        histograma(medicion, tamaño_ventana=tamaño, color=color,
+                   umbral=umbral, ax=ax[i], bins=bins,
                    ajusta_bose=ajusta_bose,
                    ajusta_poisson=ajusta_poisson)
         ax[i].legend()
+        ax[i].xaxis.grid(ls=':')
 
     return fig, ax
 
@@ -104,29 +112,44 @@ def autocorrelacion(medicion):
 
     fig, ax = plt.subplots(1)
     plot_acorr, = ax.plot([], [])
-    acorr = np.zeros(2500, dtype=float)
+    acorr = np.zeros(1250, dtype=float)
 
     for i, eje_x, eje_y in recorrer_ejes(medicion):
-        acorr += np.correlate(eje_y, eje_y, 'same')
-        plot_acorr.set_data(eje_x, acorr / i)
+        #acorr += np.correlate(eje_y, eje_y, 'same')
+        acorr += fft_autocorrelacion(eje_y)
+        plot_acorr.set_data(eje_x[1250:], acorr / i)
         ax.relim()
         ax.autoscale_view()
-        plt.pause(0.01)
+        plt.pause(0.001)
 
     return eje_x, acorr
 
+
+def fft_autocorrelacion(x):
+    """
+    Compute the autocorrelation of the signal, based on the properties of the
+    power spectral density of the signal.
+    """
+    xp = x - np.mean(x)
+    f = np.fft.fft(xp)
+    p = np.array([np.real(v)**2 + np.imag(v)**2 for v in f])
+    pi = np.fft.ifft(p)
+    return np.real(pi)[:int(x.size / 2)] / np.sum(xp**2)
+
+
+plt.ion()
 
 if __name__ == '__main__':
     plt.ion()
 
     graficar_ventanas(medicion='poisson',
                       ventanas=(500, 1000, 2000, 5000),
-                      umbral=-0.001,
+                      umbral=-0.004,
                       ajusta_poisson=True,
                       ajusta_bose=True)
 
     graficar_ventanas(medicion='bose',
                       ventanas=(500, 1000, 2000, 5000),
-                      umbral=-0.001,
+                      umbral=-0.004,
                       ajusta_poisson=True,
                       ajusta_bose=True)
