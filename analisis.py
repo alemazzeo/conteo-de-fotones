@@ -96,6 +96,25 @@ def graficar_ventanas(medicion, ventanas, umbral=-0.001,
                    ajusta_poisson=ajusta_poisson)
         ax[i].legend()
 
+    return fig, ax
+
+
+def autocorrelacion(medicion):
+    """ Grafica la autocorrelación """
+
+    fig, ax = plt.subplots(1)
+    plot_acorr, = ax.plot([], [])
+    acorr = np.zeros(2500, dtype=float)
+
+    for i, eje_x, eje_y in recorrer_ejes(medicion):
+        acorr += np.correlate(eje_y, eje_y, 'same')
+        plot_acorr.set_data(eje_x, acorr / i)
+        ax.relim()
+        ax.autoscale_view()
+        plt.pause(0.01)
+
+    return eje_x, acorr
+
 
 if __name__ == '__main__':
     plt.ion()
