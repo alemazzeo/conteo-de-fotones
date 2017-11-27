@@ -97,4 +97,32 @@ def plot_bose(ventanas=(500, 1000, 2000, 5000), umbral=-0.005):
     plt.tight_layout()
 
 
+def plot_segmento(medicion, largos=[1, 500, 1000, 2000, 5000], inicio=0,
+                  color='blue', umbral=-0.0015):
+
+    fig, ax = plt.subplots(1)
+    x, y = ejes_largos(medicion)
+    x, y = x[inicio:inicio + max(largos)], y[inicio:inicio + max(largos)]
+    x = x * 1000.0
+    x = x - x[0]
+    y = y * 1000.0
+    puntas = detecta_picos(y, umbral=umbral * 1000)
+    ax.axhline(umbral * 1000, ls=':', color='0.5')
+
+    ax.plot(x, y, color=color, lw=0.5)
+    ax.plot(x[puntas], y[puntas], ls='', color='k',
+            marker='o', mfc=color, mew=1)
+
+    for largo in largos:
+        ax.axvline(x[largo - 1], ls='--', color='k')
+        ax.set_xticks(x[np.asarray(largos, dtype=int) - 1])
+        ax.set_xticklabels(['{:.2f}'.format(x[l - 1]) for l in largos],
+                           fontsize=13)
+    ax.set_ylim(min(y) * 1.1, 2)
+    ax.set_xlabel('Tiempo (ms)')
+    ax.set_ylabel('Tensión (mV)')
+
+    return fig, ax
+
+
 plt.ion()
