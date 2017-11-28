@@ -63,12 +63,12 @@ def histograma(medicion, tamaño_ventana=2500,
 
     hist_y, hist_x = np.histogram(cantidad, bins=np.arange(bins),
                                   density=True)
-    #hist_x += ((hist_x[1] - hist_x[0]) / 2)
+    # hist_x += ((hist_x[1] - hist_x[0]) / 2)
     hist_x = hist_x[0:-1]
 
     if plot_histograma:
         ax.bar(hist_x, hist_y, alpha=0.7, color=color,
-               label=r'$t_c={:.2f}\;\mu s$'.format(abs(duracion)))
+               label=r'$T={:.2f}\;\mu s$'.format(abs(duracion)))
 
     if ajusta_poisson:
         lambda_poisson, A = ajustar_poisson(hist_x, hist_y)
@@ -107,20 +107,32 @@ def graficar_ventanas(medicion, ventanas, umbral=-0.001, bins=15, color='blue',
     return fig, ax
 
 
-def autocorrelacion(medicion):
+def autocorrelacion(medicion, ax=None, x_inc=0.5, color='blue'):
     """ Grafica la autocorrelación """
 
-    fig, ax = plt.subplots(1)
-    plot_acorr, = ax.plot([], [])
+    if ax is None:
+        fig, ax = plt.subplots(1)
+
+    ax.set_ylim(-0.1, 0.15)
+    plot_acorr, = ax.plot([], [], color=color, lw=2)
+    ax.grid(ls=':')
+
     acorr = np.zeros(1250, dtype=float)
 
     for i, eje_x, eje_y in recorrer_ejes(medicion):
-        #acorr += np.correlate(eje_y, eje_y, 'same')
         acorr += fft_autocorrelacion(eje_y)
-        plot_acorr.set_data(eje_x[1250:], acorr / i)
+        plot_acorr.set_data(eje_x[1250:] * 1000, acorr / i)
         ax.relim()
         ax.autoscale_view()
         plt.pause(0.001)
+
+    x = eje_x[1250:] * 1000
+    x0 = x[np.argmax(acorr < 0)]
+    ax.axvline(x0, ls='--')
+    ax.set_ylabel('Autocorrelación')
+    ax.set_xlabel('Tiempo ($ms$)')
+
+    ax.set_xticks(np.arange(min(x), max(x), x_inc))
 
     return eje_x, acorr
 
@@ -145,11 +157,17 @@ if __name__ == '__main__':
     graficar_ventanas(medicion='poisson',
                       ventanas=(500, 1000, 2000, 5000),
                       umbral=-0.004,
-                      ajusta_poisson=True,
-                      ajusta_bose=True)
+                      ajusta_poisson=False,
+                      ajusta_bose=True,
+                      color='blue')
+
+    plt.tight_layout()
 
     graficar_ventanas(medicion='bose',
                       ventanas=(500, 1000, 2000, 5000),
                       umbral=-0.004,
                       ajusta_poisson=True,
-                      ajusta_bose=True)
+                      ajusta_bose=False,
+                      color='orange')
+
+    plt.tight_layout()
